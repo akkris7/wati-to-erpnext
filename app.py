@@ -12,9 +12,13 @@ def wati_webhook():
 
         name = data.get('profile', {}).get('name', 'WhatsApp Lead')
         phone = data.get('waId', 'Unknown')
-        message = data.get('text', {}).get('body', 'No message')
 
-        # Payload to send to ERPNext
+        text_data = data.get('text')
+        if isinstance(text_data, dict):
+            message = text_data.get('body', 'No message')
+        else:
+            message = str(text_data) or 'No message'
+
         payload = {
             "lead_name": name,
             "email_id": f"{phone}@whatsapp.com",
@@ -27,7 +31,6 @@ def wati_webhook():
             "Accept": "application/json"
         }
 
-        # Send to ERPNext
         response = requests.post(
             "https://laeldesign-erp.daddara.in/api/method/create_lead",
             json=payload,
@@ -47,7 +50,6 @@ def wati_webhook():
         print("🔥 Error occurred:", str(e))
         return {"error": str(e)}, 500
 
-# Render-compatible server start
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
