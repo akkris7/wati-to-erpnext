@@ -1,5 +1,6 @@
 from flask import Flask, request
 import requests
+import os
 
 app = Flask(__name__)
 
@@ -12,18 +13,21 @@ def wati_webhook():
     phone = data.get('waId', 'Unknown')
     message = data.get('text', {}).get('body', 'No message')
 
+    # Payload to send to ERPNext
     payload = {
         "lead_name": name,
         "email_id": f"{phone}@whatsapp.com",
         "phone": phone
     }
 
+    # Headers with ERPNext API key and secret
     headers = {
         "Authorization": "token 24d8381cbb074e5:52a7b6f1b55fc3f",
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
 
+    # Send data to ERPNext
     response = requests.post(
         "https://laeldesign-erp.daddara.in/api/method/create_lead",
         json=payload,
@@ -36,5 +40,7 @@ def wati_webhook():
         "erp_response": response.json()
     }
 
+# Render-compatible server start
 if __name__ == '__main__':
-    app.run()
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
