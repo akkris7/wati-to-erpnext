@@ -4,21 +4,30 @@ import os
 
 app = Flask(__name__)
 
+# Health check route to prevent Render from sleeping
+@app.route('/', methods=['GET'])
+def health():
+    return "OK", 200
+
+# Main WATI webhook receiver
 @app.route('/wati-webhook', methods=['POST'])
 def wati_webhook():
     try:
         data = request.json
         print("✅ Received data from WATI:", data)
 
+        # Get name and phone
         name = data.get('profile', {}).get('name', 'WhatsApp Lead')
         phone = data.get('waId', 'Unknown')
 
+        # Extract message content safely
         text_data = data.get('text')
         if isinstance(text_data, dict):
             message = text_data.get('body', 'No message')
         else:
             message = str(text_data) or 'No message'
 
+        # Construct payload for ERPNext lead creation
         payload = {
             "lead_name": name,
             "subject": message,
@@ -33,12 +42,14 @@ def wati_webhook():
             "Accept": "application/json"
         }
 
+        # Send to ERPNext custom lead creation method
         response = requests.post(
             "https://laeldesign-erp.daddara.in/api/method/create_lead",
             json=payload,
             headers=headers
         )
 
+        # Log ERPNext response
         print("📤 Sent to ERPNext. Status:", response.status_code)
         print("📨 ERPNext Response:", response.text)
 
@@ -52,6 +63,7 @@ def wati_webhook():
         print("🔥 Error occurred:", str(e))
         return {"error": str(e)}, 500
 
+# Render-compatible server start
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
