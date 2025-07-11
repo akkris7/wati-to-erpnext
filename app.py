@@ -21,8 +21,10 @@ def wati_webhook():
 
         payload = {
             "lead_name": name,
-            "email_id": f"{phone}@whatsapp.com",
-            "phone": phone
+            "subject": message,
+            "mobile_no": phone,
+            "source": "WhatsApp",
+            "email_id": f"{phone}@whatsapp.com"
         }
 
         headers = {
