@@ -4,30 +4,33 @@ import os
 
 app = Flask(__name__)
 
-# 🔁 Health check route for UptimeRobot and Render
+# Health check route to keep the app alive (used by UptimeRobot)
 @app.route('/', methods=['GET'])
 def health():
     return "OK", 200
 
-# 🔗 Webhook endpoint to receive messages from WATI
+# Webhook endpoint for WATI
 @app.route('/wati-webhook', methods=['POST'])
 def wati_webhook():
     try:
         data = request.json
         print("✅ Received data from WATI:", data)
 
-        # Extract correct fields from actual WATI payload
-        name = data.get('senderName', 'WhatsApp Lead')
-        phone = data.get('waId', 'Unknown')
-        message = data.get('text', 'No message')
+        # Extract name and phone
+        name = data.get('senderName') or data.get('profile', {}).get('name', 'WhatsApp Lead')
+        phone = data.get('waId', '').strip()
 
-        # Prepare payload for ERPNext lead creation
+        # Safety fallback
+        if not phone:
+            return {"error": "Phone number missing"}, 400
+
+        # ERPNext payload
         payload = {
             "lead_name": name,
-            "subject": message,
+            "first_name": name,
             "mobile_no": phone,
-            "source": "WhatsApp",
-            "email_id": f"{phone}@whatsapp.com"
+            "phone": phone,  # explicitly fill both fields
+            "source": "WhatsApp"
         }
 
         headers = {
@@ -36,7 +39,7 @@ def wati_webhook():
             "Accept": "application/json"
         }
 
-        # Send to ERPNext API
+        # Send to ERPNext
         response = requests.post(
             "https://laeldesign-erp.daddara.in/api/method/create_lead",
             json=payload,
@@ -53,10 +56,10 @@ def wati_webhook():
         }
 
     except Exception as e:
-        print("🔥 Error occurred:", str(e))
+        print("🔥 Error:", str(e))
         return {"error": str(e)}, 500
 
-# 🌐 Run the app on Render (port binding)
+# Run the Flask app (for Render compatibility)
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
